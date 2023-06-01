@@ -319,6 +319,31 @@ bool move(Block canvas[CANVAS_HEIGHT][CANVAS_WIDTH], int originalX, int original
     return true;
 }
 
+void printsplash(void) {
+
+    printf("     /\\    \\                  /\\    \\              /\\    \\                  /\\    \\                  /\\    \\                  /\\    \\\n");
+    printf("    /::\\    \\                /::\\    \\            /::\\    \\                /::\\    \\                /::\\    \\                /::\\    \\\n");
+    printf("    \\:::\\    \\              /::::\\    \\           \\:::\\    \\              /::::\\    \\               \\:::\\    \\              /::::\\    \\\n");
+    printf("     \\:::\\    \\            /::::::\\    \\           \\:::\\    \\            /::::::\\    \\               \\:::\\    \\            /::::::\\    \\\n");
+    printf("      \\:::\\    \\          /:::/\\:::\\    \\           \\:::\\    \\          /:::/\\:::\\    \\               \\:::\\    \\          /:::/\\:::\\    \\\n");
+    printf("       \\:::\\    \\        /:::/__\\:::\\    \\           \\:::\\    \\        /:::/__\\:::\\    \\               \\:::\\    \\        /:::/__\\:::\\    \\\n");
+    printf("       /::::\\    \\      /::::\\   \\:::\\    \\          /::::\\    \\      /::::\\   \\:::\\    \\              /::::\\    \\       \\:::\\   \\:::\\    \\\n");
+    printf("      /::::::\\    \\    /::::::\\   \\:::\\    \\        /::::::\\    \\    /::::::\\   \\:::\\    \\    ____    /::::::\\    \\    ___\\:::\\   \\:::\\    \\\n");
+    printf("     /:::/\\:::\\    \\  /:::/\\:::\\   \\:::\\    \\      /:::/\\:::\\    \\  /:::/\\:::\\   \\:::\\____\\  /\\   \\  /:::/\\:::\\    \\  /\\   \\:::\\   \\:::\\    \\\n");
+    printf("    /:::/  \\:::\\____\\/:::/__\\:::\\   \\:::\\____\\    /:::/  \\:::\\____\\/:::/  \\:::\\   \\:::|    |/::\\   \\/:::/  \\:::\\____\\/::\\   \\:::\\   \\:::\\____\\\n");
+    printf("   /:::/    \\::/    /\\:::\\   \\:::\\   \\::/    /   /:::/    \\::/    /\\::/   |::::\\  /:::|____|\\:::\\  /:::/    \\::/    /\\:::\\   \\:::\\   \\::/    /\n");
+    printf("  /:::/    / \\/____/  \\:::\\   \\:::\\   \\/____/   /:::/    / \\/____/  \\/____|:::::\\/:::/    /  \\:::\\/:::/    / \\/____/  \\:::\\   \\:::\\   \\/____/\n");
+    printf(" /:::/    /            \\:::\\   \\:::\\    \\      /:::/    /                 |:::::::::/    /    \\::::::/    /            \\:::\\   \\:::\\    \\\n");
+    printf("/:::/    /              \\:::\\   \\:::\\____\\    /:::/    /                  |::|\\::::/    /      \\::::/____/              \\:::\\   \\:::\\____\\\n");
+    printf("\\::/    /                \\:::\\   \\::/    /    \\::/    /                   |::| \\::/____/        \\:::\\    \\               \\:::\\  /:::/    /\n");
+    printf(" \\/____/                  \\:::\\   \\/____/      \\/____/                    |::|  ~|               \\:::\\    \\               \\:::\\/:::/    /\n");
+    printf("                           \\:::\\    \\                                     |::|   |                \\:::\\    \\               \\::::::/    /\n");
+    printf("                            \\:::\\____\\                                    \\::|   |                 \\:::\\____\\               \\::::/    /\n");
+    printf("                             \\::/    /                                     \\:|   |                  \\::/    /                \\::/    /\n");
+    printf("                              \\/____/                                       \\|___|                   \\/____/                  \\/____/\n");
+    printf("\n\n\n\nWelcome to tetris!!!");
+}
+
 void printCanvas(Block canvas[CANVAS_HEIGHT][CANVAS_WIDTH], State* state)
 {
     printf("\033[0;0H\n");
@@ -336,7 +361,7 @@ void printCanvas(Block canvas[CANVAS_HEIGHT][CANVAS_WIDTH], State* state)
     {
         shapeData = shapes[state->queue[i]];
         for (int j = 0; j < 4; j++) {
-            printf("\033[%d;%dH", i * 4 + j, CANVAS_WIDTH * 2 + 15);
+            printf("\033[%d;%dH", i * 4 + j, CANVAS_WIDTH * 2 + 15);//Â÷Äæ¦h»·
             for (int k = 0; k < 4; k++) {
                 if (j < shapeData.size && k < shapeData.size && shapeData.rotates[0][j][k]) {
                     printf("\x1b[%dm  ", shapeData.color);
@@ -347,6 +372,23 @@ void printCanvas(Block canvas[CANVAS_HEIGHT][CANVAS_WIDTH], State* state)
             }
         }
     }
+
+    shapeData = shapes[state->queue[2]];
+    printf("\033[%d;%dHHold:", 3, CANVAS_WIDTH * 2 + 25);
+    for (int j = 0; j < 4; j++) {
+        printf("\033[%d;%dH", 1 * 4 + j, CANVAS_WIDTH * 2 + 35);
+        for (int k = 0; k < 4; k++) {
+            if (j < shapeData.size && k < shapeData.size && shapeData.rotates[0][j][k]) {
+                printf("\x1b[%dm  ", shapeData.color);
+            }
+            else {
+                printf("\x1b[0m  ");
+            }
+        }
+    }
+
+    printf("\033[%d;%dHScore: %d", 20, CANVAS_WIDTH * 2 + 5, (state->score)*100);
+
     return;
 }
 
@@ -474,6 +516,8 @@ int main()
         }
     }
 
+    printsplash();
+
     system("cls");
     // printf("\e[?25l"); // hide cursor
 
@@ -485,5 +529,4 @@ int main()
         printCanvas(canvas, &state);
         Sleep(100);
     }
-
 }
