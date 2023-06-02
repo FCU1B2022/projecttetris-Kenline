@@ -1,4 +1,4 @@
-#include <stdio.h>
+﻿#include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
 #include <time.h>
@@ -10,6 +10,7 @@
 #define DOWN_KEY 0x28     // The key to move down, default = 0x28 (down arrow)
 #define FALL_KEY 0x20     // The key to fall, default = 0x20 (spacebar)
 #define HOLD_KEY 0x43
+#define QUIT_KEY 0x51
 
 #define FALL_DELAY 500    // The delay between each fall, default = 500
 #define RENDER_DELAY 100  // The delay between each frame, default = 100
@@ -20,6 +21,7 @@
 #define DOWN_FUNC() GetAsyncKeyState(DOWN_KEY) & 0x8000
 #define FALL_FUNC() GetAsyncKeyState(FALL_KEY) & 0x8000
 #define HOLD_FUNC() GetAsyncKeyState(HOLD_KEY) & 0x8000
+#define QUIT_FUNC() GetAsyncKeyState(QUIT_KEY) & 0x8000
 
 #define CANVAS_WIDTH 10
 #define CANVAS_HEIGHT 20
@@ -69,7 +71,7 @@ typedef struct {
     bool current;
 }Block;
 
-Shape shapes[7] = {
+Shape shapes[8] = {
     {
         .shape = I,
         .color = CYAN,
@@ -266,11 +268,44 @@ Shape shapes[7] = {
             }
         }
     },
+    {
+        .shape = EMPTY,
+        .color = BLACK,
+        .size = 4,
+        .rotates =
+        {
+            {
+                {1, 1, 1, 1},
+                {1, 1, 1, 1},
+                {1, 1, 1, 1},
+                {1, 1, 1, 1}
+            },
+            {
+                {1, 1, 1, 1},
+                {1, 1, 1, 1},
+                {1, 1, 1, 1},
+                {1, 1, 1, 1}
+            },
+            {
+                {1, 1, 1, 1},
+                {1, 1, 1, 1},
+                {1, 1, 1, 1},
+                {1, 1, 1, 1}
+            },
+            {
+                {1, 1, 1, 1},
+                {1, 1, 1, 1},
+                {1, 1, 1, 1},
+                {1, 1, 1, 1}
+            }
+        }
+    },
 };
 
 Shape Hold = {.size = 0};
 bool isHold = false;
-
+int scoremode = 0;
+bool programContinue = true;
 
 void setBlock(Block* block, Color color, ShapeId shape, bool current)
 {
@@ -284,6 +319,19 @@ void resetBlock(Block* block)
     block->color = BLACK;
     block->shape = EMPTY;
     block->current = false;
+}
+
+void cleanShape(Block canvas[CANVAS_HEIGHT][CANVAS_WIDTH], int originalX, int originalY, int originalRotate, ShapeId shapeId) {
+    Shape shapeData = shapes[shapeId];
+    int size = shapeData.size;
+
+    for (int i = 0; i < size; i++) {
+        for (int j = 0; j < size; j++) {
+            if (shapeData.rotates[originalRotate][i][j]) {
+                resetBlock(&canvas[originalY + i][originalX + j]);
+            }
+        }
+    }
 }
 
 bool move(Block canvas[CANVAS_HEIGHT][CANVAS_WIDTH], int originalX, int originalY, int originalRotate, int newX, int newY, int newRotate, ShapeId shapeId) {
@@ -305,13 +353,7 @@ bool move(Block canvas[CANVAS_HEIGHT][CANVAS_WIDTH], int originalX, int original
     }
 
     // remove the old position
-    for (int i = 0; i < size; i++) {
-        for (int j = 0; j < size; j++) {
-            if (shapeData.rotates[originalRotate][i][j]) {
-                resetBlock(&canvas[originalY + i][originalX + j]);
-            }
-        }
-    }
+    cleanShape(canvas, originalX, originalY, originalRotate, shapeId);
 
     // move the block
     for (int i = 0; i < size; i++) {
@@ -350,12 +392,124 @@ void printsplash(void) {
     printf("\n\n\n\nWelcome to tetris!!!");
 }
 
-void printCanvas(Block canvas[CANVAS_HEIGHT][CANVAS_WIDTH], State* state)
+void printanimation(int mode) {
+    if (mode == 0) {
+        printf("\033[%d;%dH%55c", 15, CANVAS_WIDTH * 2 + 25, ' ');
+        printf("\033[%d;%dH%55c", 16, CANVAS_WIDTH * 2 + 25, ' ');
+        printf("\033[%d;%dH%55c", 17, CANVAS_WIDTH * 2 + 25, ' ');
+        printf("\033[%d;%dH%55c", 18, CANVAS_WIDTH * 2 + 25, ' ');
+        printf("\033[%d;%dH%55c", 19, CANVAS_WIDTH * 2 + 25, ' ');
+        printf("\033[%d;%dH%55c", 20, CANVAS_WIDTH * 2 + 25, ' ');
+        printf("\033[%d;%dH%55c", 21, CANVAS_WIDTH * 2 + 25, ' ');
+    }
+    else if (mode == 1) {
+        printf("\033[%d;%dH", 15, CANVAS_WIDTH * 2 + 25);
+        printf("  ####     ####    ##   #   #####    #         #####\n");
+        printf("\033[%d;%dH", 16, CANVAS_WIDTH * 2 + 25);
+        printf(" ### ##    ####   #### ##  ## ####   ##       ####\n");
+        printf("\033[%d;%dH", 17, CANVAS_WIDTH * 2 + 25);
+        printf(" ##        ####   #######  ##        ##       #\n");
+        printf("\033[%d;%dH", 18, CANVAS_WIDTH * 2 + 25);
+        printf("  ####      ##    ## ####  ##  ###   ##       ####\n");
+        printf("\033[%d;%dH", 19, CANVAS_WIDTH * 2 + 25);
+        printf("     ##     ##    ##  ###  ##   ##   ##       ##\n");
+        printf("\033[%d;%dH", 20, CANVAS_WIDTH * 2 + 25);
+        printf("### ###     ##    ##   ##  ### ###   ## ###   ###\n");
+        printf("\033[%d;%dH", 21, CANVAS_WIDTH * 2 + 25);
+        printf(" #####       #     #   #    #####    # ####    #####\n");
+    }
+    else if (mode == 2) {
+        printf("\033[%d;%dH", 15, CANVAS_WIDTH * 2 + 25);
+        printf("####      #####   ##   ##    #####   ##        ######\n");
+        printf("\033[%d;%dH", 16, CANVAS_WIDTH * 2 + 25);
+        printf("#  ###   ###  ##  ##   ##   ###  ##  ###      ####\n");
+        printf("\033[%d;%dH", 17, CANVAS_WIDTH * 2 + 25);
+        printf("##  ###  ##   ##  ##   ##  ##   ##   ###      #\n");
+        printf("\033[%d;%dH", 18, CANVAS_WIDTH * 2 + 25);
+        printf("##  ###  ##   ##  ##   ##  ## ###    ##       ####\n");
+        printf("\033[%d;%dH", 19, CANVAS_WIDTH * 2 + 25);
+        printf("##  ###  ##   ##  ###  ##  ##   ##   ##       ##\n");
+        printf("\033[%d;%dH", 20, CANVAS_WIDTH * 2 + 25);
+        printf("#  ###   ### ###  ###  ##   # ####   ## ###   ###\n");
+        printf("\033[%d;%dH", 21, CANVAS_WIDTH * 2 + 25);
+        printf("#####     #####    #####     ######  # ####    #####\n");
+    }
+    else if (mode == 3) {
+        printf("\033[%d;%dH", 15, CANVAS_WIDTH * 2 + 25);
+        printf(" ######  ######     ####    #####    ##        ######\n");
+        printf("\033[%d;%dH", 16, CANVAS_WIDTH * 2 + 25);
+        printf("######   ###  ##    ####   ###  ##   ###      ####\n");
+        printf("\033[%d;%dH", 17, CANVAS_WIDTH * 2 + 25);
+        printf("   ##    ##   ##    ####   ##   ##   ###      #\n");
+        printf("\033[%d;%dH", 18, CANVAS_WIDTH * 2 + 25);
+        printf("   ##    ##  ##      ##    ## ###    ##       ####\n");
+        printf("\033[%d;%dH", 19, CANVAS_WIDTH * 2 + 25);
+        printf("   ##    #####       ##    ####      ##       ##\n");
+        printf("\033[%d;%dH", 20, CANVAS_WIDTH * 2 + 25);
+        printf("   ##     ## ##      ##     ##       ## ###   ###\n");
+        printf("\033[%d;%dH", 21, CANVAS_WIDTH * 2 + 25);
+        printf("    #     ##  ##      #     ##       # ####    #####\n");
+    }
+    else if (mode == 4) {
+        printf("\033[%d;%dH", 15, CANVAS_WIDTH * 2 + 25);
+        printf(" #####   ##  ##      ##    ####\n");
+        printf("\033[%d;%dH", 16, CANVAS_WIDTH * 2 + 25);
+        printf("###  ##  ##  ##    #####   #  ###\n");
+        printf("\033[%d;%dH", 17, CANVAS_WIDTH * 2 + 25);
+        printf("##   ##  ##   ##   ## ###  ##  ###\n");
+        printf("\033[%d;%dH", 18, CANVAS_WIDTH * 2 + 25);
+        printf("##   ##  ##   ##  ##   ##  ##  ###\n");
+        printf("\033[%d;%dH", 19, CANVAS_WIDTH * 2 + 25);
+        printf("## ####  ###  ##  #######  ##  ###\n");
+        printf("\033[%d;%dH", 20, CANVAS_WIDTH * 2 + 25);
+        printf("### ###  ###  ##  ##  ##   # ###\n");
+        printf("\033[%d;%dH", 21, CANVAS_WIDTH * 2 + 25);
+        printf(" ######   #####   #   #    #####\n");
+    }
+    mode = 0;
+}
+
+void printwin(void) {
+    printf("░░░░░░░░░░█▀▀▀█░░░░░░░░▄█▀▀▀█░░░\n");
+    printf("░░░░░░░░░░█░░░░█░░░░░░▄█░░░░█░░░\n");
+    printf("░░░░░░░░░░█▄░░░▀█░░░░░█▀░░░██░░░\n");
+    printf("░░░░░░░░░░░█░░░░█▄░░░█▀░░░▄█░░░░\n");
+    printf("░░░░░░░░░░░▀█░░░▀█░░█▀░░░░█░░░░░\n");
+    printf("░░░░░░░░░░░░█▄░░░██▄█░░░░██░░░░\n");
+    printf("░░░░░░░░░▄▄░░█▄▄▄░░▀░░░░▄█░░░░░\n");
+    printf("░░░░░░░▄█▀▀████▀▀▀▀▀▀█▄░██░░░░░\n");
+    printf("░░░░░░░█▄░░░▀██▄▄░░░░░▀███░░░░░\n");
+    printf("░░░░█▀▀▀█▄░░░▀█▀▀▀▀█░░░▀██░░░░░\n");
+    printf("░░░░█▄░░░█▄░░░▀█░░░█░░░░▀█▄░░░░\n");
+    printf("░░░░██▄░░░██▄░▄█░░░▀░░░░░██░░░░\n");
+    printf("░░░░██▀█▄▄█▀▀▀▀░░░░░░░░░░█▀░░░░\n");
+    printf("░░░░░█░░▀▀░░░░░░░░░░░░░▄█▀░░░░░\n");
+    printf("░░░░░▀█▄░░░░░░░░░░░░░░▄█░░░░░░░\n");
+    printf("░░░░░░░▀█▄░░░░░░░░░░░█▀░░░░░░░░\n");
+}
+
+void printlose(void) {
+    printf("░░░░░░░░░░░░▄█▀▀██▀▀▀▀▀▀▀█▄░░░░░\n");
+    printf("░░░░░░░░░░▄▀░░░░█▄░▄▄▄███▀▀█▄░░\n");
+    printf("░░░▄▀▀▀▀▀▀░░░░░░▄█▀▀░░░░░░░░▄█░\n");
+    printf("░░░█░░░░░░░░░░░░▀█▄▄▄█▀▀▀▀▀▀▀▀█\n");
+    printf("░░░█░░░░░░░░░░░░░░█▀░░░░▄▄▄▄▄░▄█\n");
+    printf("░░░██░░░░░░░░░░░░░▀█▄█▀▀▀░░░░▀█▄\n");
+    printf("░░░░█░░░░░░░░░░░░░░▀█░░░░░░░░░░▀\n");
+    printf("░░░░█▄░░░░░░░░░░░░░░▀▀▀▀▀▀▀▀▀░░▄\n");
+    printf("░░░░░▀▀▀▀▀█▄░░░░░░░░░░░░░░░▄▄▄█▀\n");
+    printf("░░░░░░░░░░░▀█▄░░░░░░░██▀▀▀▀▀░░░░\n");
+    printf("░░░░░░░░░░░░░▀█▄░░░░░░█░░░░░░░░░\n");
+    printf("░░░░░░░░░░░░░░░▀█▄░░░░▀█░░░░░░░░\n");
+    printf("░░░░░░░░░░░░░░░░░▀▄░░░░▀█░░░░░░░\n");
+    printf("░░░░░░░░░░░░░░░░░░█▄░░░░▀█░░░░░░\n");
+    printf("░░░░░░░░░░░░░░░░░░░█░░░░░█░░░░░░\n");
+    printf("░░░░░░░░░░░░░░░░░░░░▀▄▄▄▄▀░░░░░░\n");
+}
+
+void printCanvas(Block canvas[CANVAS_HEIGHT][CANVAS_WIDTH], State* state, int floor)
 {
     printf("\033[0;0H\n");
-    if (isHold) {
-        move(canvas, state->x, state->y, state->rotate, state->x, state->y, 0, Hold.shape);
-    }
     for (int i = 0; i < CANVAS_HEIGHT; i++) {
         printf("|");
         for (int j = 0; j < CANVAS_WIDTH; j++) {
@@ -370,7 +524,7 @@ void printCanvas(Block canvas[CANVAS_HEIGHT][CANVAS_WIDTH], State* state)
     {
         shapeData = shapes[state->queue[i]];
         for (int j = 0; j < 4; j++) {
-            printf("\033[%d;%dH", i * 4 + j, CANVAS_WIDTH * 2 + 15);//����h��
+            printf("\033[%d;%dH", i * 4 + j, CANVAS_WIDTH * 2 + 15);//離欄多遠
             for (int k = 0; k < 4; k++) {
                 if (j < shapeData.size && k < shapeData.size && shapeData.rotates[0][j][k]) {
                     printf("\x1b[%dm  ", shapeData.color);
@@ -396,7 +550,11 @@ void printCanvas(Block canvas[CANVAS_HEIGHT][CANVAS_WIDTH], State* state)
             }
         }
     }
-    printf("\033[%d;%dHScore: %d", 20, CANVAS_WIDTH * 2 + 5, (state->score)*100);
+
+    printanimation(scoremode);
+
+    printf("\033[%d;%dHFloorleft: %d", 18, CANVAS_WIDTH * 2 + 5, floor);
+    printf("\033[%d;%dHScore: %d", 20, CANVAS_WIDTH * 2 + 5, (state->score));
 
     return;
 }
@@ -434,7 +592,7 @@ int clearLine(Block canvas[CANVAS_HEIGHT][CANVAS_WIDTH]) {
                     resetBlock(&canvas[j - 1][k]);
                 }
             }
-            i++;//�������٭�
+            i++;//消掉後還原
         }
     }
 
@@ -442,7 +600,7 @@ int clearLine(Block canvas[CANVAS_HEIGHT][CANVAS_WIDTH]) {
     return linesCleared;
 }
 
-void logic(Block canvas[CANVAS_HEIGHT][CANVAS_WIDTH], State* state)
+void logic(Block canvas[CANVAS_HEIGHT][CANVAS_WIDTH], State* state, int* floor)
 {
     if (ROTATE_FUNC()) {
         int newRotate = (state->rotate + 1) % 4;
@@ -469,6 +627,25 @@ void logic(Block canvas[CANVAS_HEIGHT][CANVAS_WIDTH], State* state)
     else if (FALL_FUNC()) {
         state->fallTime += FALL_DELAY * CANVAS_HEIGHT;
     }
+    else if (HOLD_FUNC() && !isHold) {
+        isHold = true;
+
+        cleanShape(canvas, state->x, state->y, state->rotate, state->queue[0]);//clean original shape
+
+        if (Hold.size == 0) {
+            Hold = shapes[state->queue[0]];
+            state->queue[0] = state->queue[1];
+            state->queue[1] = state->queue[2];
+            state->queue[2] = state->queue[3];
+            state->queue[3] = rand() % 7;
+        }//hold have nothing
+        else {
+            ShapeId temp = state->queue[0];
+            state->queue[0] = Hold.shape;
+            Hold = shapes[temp];
+        }//when hold exist
+        state->rotate = 0;
+    }
 
     state->fallTime += RENDER_DELAY;
 
@@ -476,26 +653,33 @@ void logic(Block canvas[CANVAS_HEIGHT][CANVAS_WIDTH], State* state)
         state->fallTime -= FALL_DELAY;
 
         if (move(canvas, state->x, state->y, state->rotate, state->x, state->y + 1, state->rotate, state->queue[0])) {
-            if (HOLD_FUNC()) {
-                isHold = true;
-                if (Hold.size == 0) {
-                    Hold = shapes[state->queue[0]];
-                    state->queue[0] = state->queue[1];
-                    state->queue[1] = state->queue[2];
-                    state->queue[2] = state->queue[3];
-                    state->queue[3] = rand() % 7;
-                }
-                else {
-                    ShapeId temp = state->queue[0];
-                    state->queue[0] = Hold.shape;
-                    Hold = shapes[temp];
-                }
-            }
-            else isHold = false;
             state->y++;
         }
         else {
-            state->score += clearLine(canvas);
+            state->score += 20;
+
+            int score = clearLine(canvas);
+            if (score == 0) {
+                scoremode = 0;
+            }
+            else if (score == 1) {
+                scoremode = 1;
+                state->score += 100;
+            }
+            else if (score == 2) {
+                scoremode = 2;
+                state->score += 200;
+            }
+            else if (score == 3) {
+                scoremode = 3;
+                state->score += 300;
+            }
+            else if (score == 4) {
+                scoremode = 4;
+                state->score += 500;
+            }
+
+            *floor -= score;
 
             state->x = CANVAS_WIDTH / 2;
             state->y = 0;
@@ -508,8 +692,11 @@ void logic(Block canvas[CANVAS_HEIGHT][CANVAS_WIDTH], State* state)
 
             if (!move(canvas, state->x, state->y, state->rotate, state->x, state->y, state->rotate, state->queue[0]))
             {
-                printf("\033[%d;%dH\x1b[41m GAME OVER \x1b[0m\033[%d;%dH", CANVAS_HEIGHT - 3, CANVAS_WIDTH * 2 + 5, CANVAS_HEIGHT + 5, 0);
-                exit(0);
+                programContinue = false;
+                system("cls");
+                printlose();
+                Sleep(1000);
+                return;
             }
 
             isHold = false;
@@ -520,41 +707,59 @@ void logic(Block canvas[CANVAS_HEIGHT][CANVAS_WIDTH], State* state)
 
 int main()
 {
-    srand(time(NULL));
-    State state = {
-        .x = CANVAS_WIDTH / 2,
-        .y = 0,
-        .score = 0,
-        .rotate = 0,
-        .fallTime = 0
-    };
+    while (1) {
+        int floor = 0;
+        srand(time(NULL));
+        State state = {
+            .x = CANVAS_WIDTH / 2,
+            .y = 0,
+            .score = 0,
+            .rotate = 0,
+            .fallTime = 0
+        };
 
-    for (int i = 0; i < 4; i++)
-    {
-        state.queue[i] = rand() % 7;
-    }
-
-    Block canvas[CANVAS_HEIGHT][CANVAS_WIDTH];
-    for (int i = 0; i < CANVAS_HEIGHT; i++)
-    {
-        for (int j = 0; j < CANVAS_WIDTH; j++)
+        for (int i = 0; i < 4; i++)
         {
-            resetBlock(&canvas[i][j]);
+            state.queue[i] = rand() % 7;
         }
-    }
 
-    printsplash();
-    Sleep(5000);
+        Block canvas[CANVAS_HEIGHT][CANVAS_WIDTH];
+        for (int i = 0; i < CANVAS_HEIGHT; i++)
+        {
+            for (int j = 0; j < CANVAS_WIDTH; j++)
+            {
+                resetBlock(&canvas[i][j]);
+            }
+        }
 
-    system("cls");
-    // printf("\e[?25l"); // hide cursor
+        system("cls");
+        printsplash();
+        printf("\n請輸入您想要挑戰的層數 : ");
+        printf("\n或輸0退出");        
+        scanf_s("%d", &floor);
+        if (floor == 0) return 0;
 
-    move(canvas, state.x, state.y, state.rotate, state.x, state.y, state.rotate, state.queue[0]);
 
-    while (1)
-    {
-        logic(canvas, &state);
-        printCanvas(canvas, &state);
-        Sleep(100);
+        system("cls");
+
+        move(canvas, state.x, state.y, state.rotate, state.x, state.y, state.rotate, state.queue[0]);
+
+        while (floor > 0 && programContinue)
+        {
+            logic(canvas, &state, &floor);
+            printCanvas(canvas, &state, floor);
+            Sleep(100);
+        }
+        
+        if (programContinue) {
+            system("cls");
+            printwin();
+            Sleep(1000);
+        }
+
+        Hold.size = 0;
+        isHold = false;
+        scoremode = 0;
+        programContinue = true;
     }
 }
