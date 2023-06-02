@@ -9,6 +9,7 @@
 #define ROTATE_KEY 0x26   // The key to rotate, default = 0x26 (up arrow)
 #define DOWN_KEY 0x28     // The key to move down, default = 0x28 (down arrow)
 #define FALL_KEY 0x20     // The key to fall, default = 0x20 (spacebar)
+#define HOLD_KEY 0x43
 
 #define FALL_DELAY 500    // The delay between each fall, default = 500
 #define RENDER_DELAY 100  // The delay between each frame, default = 100
@@ -18,6 +19,7 @@
 #define ROTATE_FUNC() GetAsyncKeyState(ROTATE_KEY) & 0x8000
 #define DOWN_FUNC() GetAsyncKeyState(DOWN_KEY) & 0x8000
 #define FALL_FUNC() GetAsyncKeyState(FALL_KEY) & 0x8000
+#define HOLD_FUNC() GetAsyncKeyState(HOLD_KEY) & 0x8000
 
 #define CANVAS_WIDTH 10
 #define CANVAS_HEIGHT 20
@@ -266,6 +268,10 @@ Shape shapes[7] = {
     },
 };
 
+Shape Hold = {.size = 0};
+bool isHold = false;
+
+
 void setBlock(Block* block, Color color, ShapeId shape, bool current)
 {
     block->color = color;
@@ -347,6 +353,9 @@ void printsplash(void) {
 void printCanvas(Block canvas[CANVAS_HEIGHT][CANVAS_WIDTH], State* state)
 {
     printf("\033[0;0H\n");
+    if (isHold) {
+        move(canvas, state->x, state->y, state->rotate, state->x, state->y, 0, Hold.shape);
+    }
     for (int i = 0; i < CANVAS_HEIGHT; i++) {
         printf("|");
         for (int j = 0; j < CANVAS_WIDTH; j++) {
@@ -373,20 +382,20 @@ void printCanvas(Block canvas[CANVAS_HEIGHT][CANVAS_WIDTH], State* state)
         }
     }
 
-    shapeData = shapes[state->queue[2]];
     printf("\033[%d;%dHHold:", 3, CANVAS_WIDTH * 2 + 25);
-    for (int j = 0; j < 4; j++) {
-        printf("\033[%d;%dH", 1 * 4 + j, CANVAS_WIDTH * 2 + 35);
-        for (int k = 0; k < 4; k++) {
-            if (j < shapeData.size && k < shapeData.size && shapeData.rotates[0][j][k]) {
-                printf("\x1b[%dm  ", shapeData.color);
-            }
-            else {
-                printf("\x1b[0m  ");
+    if (isHold) {
+        for (int j = 0; j < 4; j++) {
+            printf("\033[%d;%dH", 1 * 4 + j, CANVAS_WIDTH * 2 + 35);
+            for (int k = 0; k < 4; k++) {
+                if (j < Hold.size && k < Hold.size && Hold.rotates[0][j][k]) {
+                    printf("\x1b[%dm  ", Hold.color);
+                }
+                else {
+                    printf("\x1b[0m  ");
+                }
             }
         }
     }
-
     printf("\033[%d;%dHScore: %d", 20, CANVAS_WIDTH * 2 + 5, (state->score)*100);
 
     return;
@@ -467,6 +476,22 @@ void logic(Block canvas[CANVAS_HEIGHT][CANVAS_WIDTH], State* state)
         state->fallTime -= FALL_DELAY;
 
         if (move(canvas, state->x, state->y, state->rotate, state->x, state->y + 1, state->rotate, state->queue[0])) {
+            if (HOLD_FUNC()) {
+                isHold = true;
+                if (Hold.size == 0) {
+                    Hold = shapes[state->queue[0]];
+                    state->queue[0] = state->queue[1];
+                    state->queue[1] = state->queue[2];
+                    state->queue[2] = state->queue[3];
+                    state->queue[3] = rand() % 7;
+                }
+                else {
+                    ShapeId temp = state->queue[0];
+                    state->queue[0] = Hold.shape;
+                    Hold = shapes[temp];
+                }
+            }
+            else isHold = false;
             state->y++;
         }
         else {
@@ -486,6 +511,8 @@ void logic(Block canvas[CANVAS_HEIGHT][CANVAS_WIDTH], State* state)
                 printf("\033[%d;%dH\x1b[41m GAME OVER \x1b[0m\033[%d;%dH", CANVAS_HEIGHT - 3, CANVAS_WIDTH * 2 + 5, CANVAS_HEIGHT + 5, 0);
                 exit(0);
             }
+
+            isHold = false;
         }
     }
     return;
@@ -517,6 +544,7 @@ int main()
     }
 
     printsplash();
+    Sleep(5000);
 
     system("cls");
     // printf("\e[?25l"); // hide cursor
