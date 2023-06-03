@@ -71,7 +71,7 @@ typedef struct {
     bool current;
 }Block;
 
-Shape shapes[8] = {
+Shape shapes[7] = {
     {
         .shape = I,
         .color = CYAN,
@@ -265,38 +265,6 @@ Shape shapes[8] = {
                 {0, 1, 0},
                 {1, 1, 0},
                 {1, 0, 0}
-            }
-        }
-    },
-    {
-        .shape = EMPTY,
-        .color = BLACK,
-        .size = 4,
-        .rotates =
-        {
-            {
-                {1, 1, 1, 1},
-                {1, 1, 1, 1},
-                {1, 1, 1, 1},
-                {1, 1, 1, 1}
-            },
-            {
-                {1, 1, 1, 1},
-                {1, 1, 1, 1},
-                {1, 1, 1, 1},
-                {1, 1, 1, 1}
-            },
-            {
-                {1, 1, 1, 1},
-                {1, 1, 1, 1},
-                {1, 1, 1, 1},
-                {1, 1, 1, 1}
-            },
-            {
-                {1, 1, 1, 1},
-                {1, 1, 1, 1},
-                {1, 1, 1, 1},
-                {1, 1, 1, 1}
             }
         }
     },
@@ -695,7 +663,7 @@ void logic(Block canvas[CANVAS_HEIGHT][CANVAS_WIDTH], State* state, int* floor)
                 programContinue = false;
                 system("cls");
                 printlose();
-                Sleep(1000);
+                Sleep(2000);
                 return;
             }
 
@@ -734,8 +702,7 @@ int main()
 
         system("cls");
         printsplash();
-        printf("\n請輸入您想要挑戰的層數 : ");
-        printf("\n或輸0退出");        
+        printf("\n請輸入您想要挑戰的層數或輸0退出 : ");        
         scanf_s("%d", &floor);
         if (floor == 0) return 0;
 
@@ -754,7 +721,7 @@ int main()
         if (programContinue) {
             system("cls");
             printwin();
-            Sleep(1000);
+            Sleep(2000);
         }
 
         Hold.size = 0;
